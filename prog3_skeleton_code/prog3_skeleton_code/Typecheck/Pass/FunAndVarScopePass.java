@@ -20,7 +20,10 @@ public class FunAndVarScopePass extends ScopePass<Void> {
        if (this.currentscope.hasLocalFun(node.name)) {
            throw new TypeCheckException("Tried to define var ("+node.name+") but fun with same name already exists");
        }
-       
+       else {
+		   VarSymbol v = new VarSymbol(node.name, node.type);
+		   this.currentscope.addVar(node.name, v);
+	   }
 	}
 // Hint: Functions must be registered in the current scope before visiting their body.
 // 1. Ensure no variable with the same name exists in the current scope.
@@ -30,12 +33,25 @@ public class FunAndVarScopePass extends ScopePass<Void> {
 // 5. Enter the function’s scope and visit its contents.
    @Override
    public Void visitFunDecl(Absyn.FunDecl node) {
+	   if (this.currentscope.hasLocalFun(node.name)) {
+           throw new TypeCheckException("Tried to define var ("+node.name+") but fun with same name already exists");
+       }
+	   else {
+		   
+	   }
    }
 // Hint: Struct members are variables within the struct's scope.
 // 1. Ensure no function with this name exists in the current scope.
 // 2. Add the member as a variable symbol using its annotated type.
    @Override
    public Void visitStructMember(Absyn.StructMember node) {
+	    if (this.currentscope.hasLocalFun(node.name)) {
+           throw new TypeCheckException("Tried to define var ("+node.name+") but fun with same name already exists");
+       }
+	   else {
+		   VarSymbol v = new VarSymbol(node.name, node.type);
+		   this.currentscope.addVar(node.name, v);
+	   }
    }
 // Hint: Union members behave like variables within the union scope.
 // 1. Ensure no function with this name exists in the current scope.
@@ -45,12 +61,24 @@ public class FunAndVarScopePass extends ScopePass<Void> {
     // later, but for now we treat them as the same as structs. 
    @Override
    public Void visitUnionMember(Absyn.UnionMember node) {
+	    if (this.currentscope.hasLocalFun(node.name)) {
+           throw new TypeCheckException("Tried to define var ("+node.name+") but fun with same name already exists");
+       }
+	   else {
+		   VarSymbol v = new VarSymbol(node.name, node.type);
+		   this.currentscope.addVar(node.name, v);
    }
 // Hint: Variable declarations introduce a new variable in the current scope.
 // 1. Ensure no function with this name exists in the current scope.
 // 2. Add the variable symbol using its annotated type.
    @Override
    public Void visitVarDecl(Absyn.VarDecl node) {
+	    if (this.currentscope.hasLocalFun(node.name)) {
+           throw new TypeCheckException("Tried to define var ("+node.name+") but fun with same name already exists");
+       }
+	   else {
+		   VarSymbol v = new VarSymbol(node.name, node.type);
+		   this.currentscope.addVar(node.name, v);
    }
 
 }
