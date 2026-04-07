@@ -1,7 +1,6 @@
 package Typecheck.Pass;
 import Typecheck.Types.*;
 import Typecheck.SymbolTable.*;
-import java.util.ArrayList;
 import java.util.Set;
 
 public class TypeScopePass extends ScopePass<Void> {
@@ -70,9 +69,11 @@ public class TypeScopePass extends ScopePass<Void> {
    // Hint: Visit the brackets and resolve the alias to a type (if the typeAnnotation contains ALIAS)
    @Override
    public Void visitType(Absyn.Type node) {
-      // Just ensure brackets are visited
       if (node.brackets != null) {
          visit(node.brackets);
+      }
+      if (node.typeAnnotation != null) {
+         node.typeAnnotation = resolveAlias(node.typeAnnotation);
       }
       return null;
    }
