@@ -21,7 +21,7 @@
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            javaPackages.compiler.temurin-bin.jre-25
+            jre11_minimal
 
             vscodium
           ];
