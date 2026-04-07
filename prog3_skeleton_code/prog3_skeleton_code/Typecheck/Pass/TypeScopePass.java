@@ -1,13 +1,14 @@
 package Typecheck.Pass;
 import Typecheck.Types.*;
 import Typecheck.SymbolTable.*;
-import java.util.Set;
+import java.util.ArrayList;
 
 public class TypeScopePass extends ScopePass<Void> {
 
    public TypeScopePass(Scope s) {
       super(s);
    }
+
 // Hint: Structs define a new type from their member types.
 // 1. Visit the body so member types are fully resolved.
 // 2. Collect each member's typeAnnotation.
@@ -15,11 +16,17 @@ public class TypeScopePass extends ScopePass<Void> {
 // 4. Register the struct name in the current scope.
    @Override
    public Void visitStructDecl(Absyn.StructDecl node) {
-      if (node.body != null) {
-         node.body.accept(this);
+      visit(node.body);
+      ArrayList<Type> memberTypes = new ArrayList<>();
+      for (Absyn.Decl d : node.body.list) {
+         Absyn.StructMember m = (Absyn.StructMember) d;
+         memberTypes.add(m.type.typeAnnotation);
       }
+      LIST structType = new LIST(memberTypes);
+      this.currentscope.addType(node.name, new TypeSymbol(node.name, structType));
       return null;
    }
+
 // Hint: Unions define a type that can be any of their member types.
 // 1. Visit the body so member types are resolved.
 // 2. Collect each member's typeAnnotation.
@@ -27,53 +34,56 @@ public class TypeScopePass extends ScopePass<Void> {
 // 4. Register the union name in the current scope.
    @Override
    public Void visitUnionDecl(Absyn.UnionDecl node) {
-      if (node.body != null) {
-         node.body.accept(this);
+      visit(node.body);
+      ArrayList<Type> memberTypes = new ArrayList<>();
+      for (Absyn.Decl d : node.body.list) {
+         Absyn.UnionMember m = (Absyn.UnionMember) d;
+         memberTypes.add(m.type.typeAnnotation);
       }
+      OR unionType = new OR(memberTypes);
+      this.currentscope.addType(node.name, new TypeSymbol(node.name, unionType));
       return null;
    }
+
 // Hint: Typedef introduces a new name for an existing type.
 // Visit the type first, then register the alias in the current scope.
    @Override
    public Void visitTypedef(Absyn.Typedef node) {
-      if (node.type != null) {
-         node.type.accept(this);
-      }
+      visit(node.type);
+      this.currentscope.addType(node.name, new TypeSymbol(node.name, node.type.typeAnnotation));
       return null;
    }
-// Hint: Replace ALIAS types with their real definition.
-// Remember that Types can be nested (IE ARRAY(ARRAY(ARRAY(...))) )
-// Traverse the whole type to search for Aliases. Once an alias is found,
-// look up the type of the alias in the symbol table.
-    // This is a function I found helpful to implement. If you have a solution
-    // in mind that does not include a helper function, then feel free to ignore
-   private Type resolveAlias(Type type) {
-      // Base case: null or primitive type with no synonyms to resolve
-      if (type == null) return null;
 
-      // If this type has synonyms (i.e. it's an alias), resolve to the real type
-      Set<Type> synonyms = type.getSynonyms();
-      if (synonyms.size() > 1 || !synonyms.contains(type)) {
-         for (Type synonym : synonyms) {
-               if (!synonym.equals(type)) {
-                  // Recurse in case the synonym is itself an alias
-                  return resolveAlias(synonym);
-               }
+// Hint: Replace ALIAS types with their real definition.
+   private void resolveAlias(Type type) {
+      if (type instanceof ALIAS) {
+         ALIAS alias = (ALIAS) type;
+         if (this.currentscope.hasType(alias.name)) {
+            alias.setType(this.currentscope.getType(alias.name).type);
+         } else {
+            throw new Typecheck.TypeCheckException("Unknown type: " + alias.name);
+         }
+      } else if (type instanceof ARRAY) {
+         resolveAlias(((ARRAY) type).type);
+      } else if (type instanceof POINTER) {
+         resolveAlias(((POINTER) type).type);
+      } else if (type instanceof LIST) {
+         for (Type t : ((LIST) type).typelist) {
+            resolveAlias(t);
+         }
+      } else if (type instanceof OR) {
+         for (Type t : ((OR) type).options) {
+            resolveAlias(t);
          }
       }
-
-      return type;
    }
 
-
-   // Hint: Visit the brackets and resolve the alias to a type (if the typeAnnotation contains ALIAS)
+// Hint: Visit the brackets and resolve the alias to a type
    @Override
    public Void visitType(Absyn.Type node) {
-      if (node.brackets != null) {
-         visit(node.brackets);
-      }
+      visit(node.brackets);
       if (node.typeAnnotation != null) {
-         node.typeAnnotation = resolveAlias(node.typeAnnotation);
+         resolveAlias(node.typeAnnotation);
       }
       return null;
    }
