@@ -4,6 +4,7 @@ import Typecheck.SymbolTable.*;
 import Typecheck.TypeCheckException;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.ArrayList;
 
 public class JudgementsPass extends ScopePass<Void> {
 
@@ -171,4 +172,26 @@ public class JudgementsPass extends ScopePass<Void> {
       }
       return null;
    }
+   @Override
+public Void visitExpList(Absyn.ExpList node) {
+   ArrayList<Type> types = new ArrayList<>();
+   for (Absyn.Exp e : node.list) {
+      visit(e);
+      types.add(e.typeAnnotation);
+   }
+   node.typeAnnotation = new LIST(types);
+   return null;
+}
+@Override
+public Void visitType(Absyn.Type node) {
+   if (node.typeAnnotation instanceof ALIAS) {
+      ALIAS alias = (ALIAS) node.typeAnnotation;
+      if (currentscope.hasType(alias.name)) {
+         alias.setType(currentscope.getType(alias.name).type);
+      } else {
+         throw new TypeCheckException("Unknown type: " + alias.name);
+      }
+   }
+   return null;
+}
 }
